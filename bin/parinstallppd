@@ -5,7 +5,7 @@ use warnings;
 use Getopt::Long qw/GetOptions/;
 use PAR::Dist::InstallPPD;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =pod
 
@@ -17,7 +17,7 @@ parinstallppd - Install PPD/PPM packages using PAR
 
 parinstallppd --help
 
-parinstallppd [-v -o DIR ...] -u PPD-URI-OR-FILE
+parinstallppd [-v ...] -u PPD-URI-OR-FILE
 
 =head1 DESCRIPTION
 
@@ -35,30 +35,15 @@ installation step after the conversion.
     (http://..., https://..., ftp://...) or a local file.
   -v --verbose
     Sets the verbose mode.
-  --no-docs
-    Strip all documentation (man pages, html documentation) from the
-    resulting PAR distribution.
-    (This step is carried out at the end. If something goes wrong,
-     it will be skipped.)
 
-You can also set various bits of meta data by hand:
-
-  -n --distname
-    Distribution nompress::LZF 	Version 1.7.0.0 	Perl 5.6 Perl 5.8
-Author: Marc Lehmann <schmorp (at) schmorp.de>
-Abstract: extremely light-weight Lev-Zimpel-Free compression
-For installation, cut and paste in a DOS console:
-  ppm install http://www.bribes.org/perl/ppm/Compress-LZF.ppdame
-  --dv --distversion
-    Distribution version (Note: This is not -v!)
-  -p --perlversion
-    Perl version (can be set to 'any_version')
-  -a --arch
-    Architecture string (can be set to 'any_arch')
   --sa --selectarch
-    Regexp for selecting the implementation based on architecture
+    Regexp for selecting the implementation based on architecture.
+    Defaults to the currently running architecture.
   --sp --selectperl
-    Regexp for selecting the implementation based on perl version
+    Regexp for selecting the implementation based on perl version.
+    Defaults to the currently running perl version (e.g. 5.8.8) and falls
+    back to the main version (e.g. 5.8) and then other sub-versions
+    (e.g. 5.8.7)
 
 =head1 SEE ALSO
 
@@ -107,57 +92,32 @@ installation step after the conversion.
   (http://..., https://..., ftp://...) or a local file.
 -v --verbose
   Sets the verbose mode.
---no-docs
-  Strip all documentation (man pages, html documentation) from the
-  resulting PAR distribution.
-  (This step is carried out at the end. If something goes wrong,
-   it will be skipped.)
 
-You can also set various bits of meta data by hand:
--n --distname
-  Distribution name
---dv --distversion
-  Distribution version (Note: This is not -v!)
--p --perlversion
-  Perl version (can be set to 'any_version')
--a --arch
-  Architecture string (can be set to 'any_arch')
 --sa --selectarch
-  Regexp for selecting the implementation based on architecture
+  Regexp for selecting the implementation based on architecture.
+  Defaults to the currently running architecture.
 --sp --selectperl
-  Regexp for selecting the implementation based on perl version
+  Regexp for selecting the implementation based on perl version.
+  Defaults to the currently running perl version (e.g. 5.8.8) and
+  falls   back to the main version (e.g. 5.8) and then other
+  sub-versions (e.g. 5.8.7)
 HERE
 
 my $uri;
 my $v = 0;
-my $nodocs = 0;
-my $distname;
-my $distversion;
-my $arch;
-my $perl;
 my $sperl;
 my $sarch;
 GetOptions(
-    'n|distname=s' => \$distname,
-    'dv|distversion=s' => \$distversion,
-    'a|arch=s' => \$arch,
-    'p|perlversion=s' => \$perl,
     'sa|selectarch=s' => \$sarch,
     'sp|selectperl=s' => \$sperl,
 	'h|help' => sub { print $usage; exit(1) },
 	'u|uri=s' => \$uri,
 	'v|verbose' => \$v,
-	'no-docs' => \$nodocs,
 );
 
 par_install_ppd(
 	uri => $uri,
 	($v               ? (verbose      => 1            ) : ()),
-	($nodocs          ? (strip_docs   => 1            ) : ()),
-    ($distname        ? (distname     => $distname    ) : ()),
-    ($distversion     ? (distversion  => $distversion ) : ()),
-    ($arch            ? (arch         => $arch        ) : ()),
-    ($perl            ? (perlversion  => $perl        ) : ()),
     ($sarch           ? (selectarch   => $sarch       ) : ()),
     ($sperl           ? (selectperl   => $sperl       ) : ()),
 );

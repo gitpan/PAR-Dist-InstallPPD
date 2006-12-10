@@ -11,6 +11,7 @@ use File::Spec;
 use File::Path;
 use Cwd;
 
+require Config;
 require Exporter;
 
 our @ISA = qw(Exporter);
@@ -25,7 +26,7 @@ our @EXPORT = qw(
     par_install_ppd
 );
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 our $VERBOSE = 0;
 
@@ -47,10 +48,41 @@ sub par_install_ppd {
  
     _verbose($args{'verbose'});
 
+    _diag "Creating temporary directory for temporary .par";
+
     my $tdir = $args{out} = File::Temp::tempdir(
         CLEANUP => 1,
         DIR => File::Spec->tmpdir(),
     );
+
+    _diag "Preparing meta data for temporary .par";
+
+    # should be figured out by ::FromPPD
+    delete $args{$_} for qw(
+        distversion perlversion
+    );
+    # just need to be defined.
+    $args{arch} = $Config::Config{archname};
+    $args{perlversion} = sprintf('%vd', $^V);
+
+    # Accept running perl version (5.8.8)
+    # or main perl version (5.8)
+    # or any other subversions (5.8.6)
+    my $perlver = sprintf('%vd', $^V);
+    my $mainperlver = $perlver;
+    $mainperlver =~ s/^(\d+)\.(\d+)\..*$/$1.$2/;
+    _diag "Setting perl version to ($perlver|$mainperlver|$mainperlver\\.\\d+)"
+      if not defined $args{selectperl};
+    $args{selectperl} ||= qr/^(?:$perlver|$mainperlver|$mainperlver\.\d+)$/;
+
+
+    # Accept running arch
+    my $arch = quotemeta( $Config::Config{archname} );
+    _diag "Setting architecture to $Config::Config{archname}"
+      if not defined $args{selectarch};
+    my $perlver_nodots = $mainperlver;
+    $perlver_nodots =~ s/\.//g;
+    $args{selectarch} ||= qr/^(?:$arch-?(?:$perlver_nodots\d*|$mainperlver(?:\.\d+)?)|$arch)$/;
 
     _diag "Using temporary directory $tdir.";
     _diag "Invoking PAR::Dist::FromPPD to create the .par file.";
@@ -131,8 +163,9 @@ This is a list of all public subroutines in the module.
 =head2 par_install_ppd
 
 This routine takes the same arguments as C<ppd_to_par> from
-L<PAR::Dist::FromPPD> except for the output directory. The details
-are reproduced below.
+L<PAR::Dist::FromPPD> except for the output directory and the
+options that set the meta data for the produced F<.par> file.
+The details are reproduced below.
 
 The only mandatory parameter is an URI for the PPD file to parse.
 
@@ -140,21 +173,13 @@ Arguments:
 
   uri         => 'ftp://foo/bar' or 'file:///home/you/file.ppd', ...
   verbose     => 1/0 (verbose mode on/off)
-  distname    => Override the distribution name
-  distversion => Override the distribution version
-  perlversion => Override the distribution's (minimum?) perl version
-  arch        => Override the distribution's target architecture
   selectarch  => Regular Expression.
   selectperl  => Regular Expression.
-
-C<arch> may also be set to C<any_arch> and C<perlversion> may be set to
-C<any_version>.
 
 If a regular expression is specified using C<selectarch>, that expression is
 matched against the architecture settings of each implementation. The first
 matching implementation is chosen. If none matches, the implementations
-are tried in order of appearance. Of course, this heuristic is applied before
-any architecture overriding via the C<arch> parameter is carried out.
+are tried in order of appearance.
 
 C<selectperl> works the same as C<selectarch>, but operates on the (minimum)
 perl version of an implementation. If both C<selectperl> and C<selectarch>
